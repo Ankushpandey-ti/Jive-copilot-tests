@@ -5,15 +5,16 @@ import os
 
 from dotenv import load_dotenv
 load_dotenv()
+
+
 ## INPUTS
 opensearch_domain_url ='https://vpc-ti-shared-e2wxgh4hpjqlvfgbqe472c4maa.us-east-1.es.amazonaws.com/'
-feedback_rating = 5
 size = 10000
 
 index = os.environ['INDEX_NAME']
 username = os.environ['USERNAME']
 password =os.environ['PASSWORD']
-filename = 'qa_5star_feedback_data.json'
+filename = 'qa_corpus_data.json'
 
 search_path ='jive_copilot_qa_corpus/_search'
 def write_to_file(filename:str, data):
@@ -33,8 +34,19 @@ def get_qa_data_feedback_based():
         "size": size,
         "from": 0,
         "query": {
-            "term": {
-                "feedback.rating": feedback_rating
+            "bool": {
+              "filter": [
+                {
+                  "term": {
+                    "environment.keyword": "STAGING"
+                  }
+                },
+                {
+                  "term": {
+                    "app_version": "2.0.0"
+                  }
+                }
+              ]
             }
         }
     }

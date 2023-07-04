@@ -10,11 +10,11 @@ from langchain.schema import (
 import os
 from dotenv import load_dotenv
 load_dotenv()
-
+import multiprocessing
 
 PROMPT_LAYER_API_KEY= os.environ['PROMPT_LAYER_API_KEY']
-OPEN_API_KEY=os.environ['OPEN_AI_KEY']
-FILE_PATH='./qa_5star_feedback_data.json'
+OPEN_API_KEY=os.environ['OPENAI_API_KEY']
+FILE_PATH= 'after_Jive_Add_On.json'
 
 def get_prompts(question:str,correct_answer:str,new_answer:str):
     human_message_prompt = f'''Rate how similar these two answers are. Correct_answer:{correct_answer}, New_answer:{new_answer} .'''
@@ -41,41 +41,64 @@ def get_data_from_file(file_path) -> Dict:
 
     json_object = json_data
     # Now you can work with the JSON object
-    print(json_object)
     return json_object
+
+def write_to_file(filepath, file_data):
+    with open(filepath, 'w') as file:
+        for item in file_data:
+            file_data.append(item)
+        file.write(json.dumps(file_data))
+
+    print(f"Data written to {filepath}")
+    return
 
 def rate_similarity():
     promptlayer.api_key = PROMPT_LAYER_API_KEY
-    chat = PromptLayerOpenAI(temperature=0.2, openai_api_key=OPEN_API_KEY,verbose=True,
+    chat = PromptLayerOpenAI(temperature=0.4, openai_api_key=OPEN_API_KEY,verbose=True,
                             streaming=False, pl_tags=["answer-similarity"])
     file_data=[]
     json_object = get_data_from_file(FILE_PATH)
-    correct_answer = json_object[0]['answer']
-    question = json_object[0]['question']
-    new_answer ="""DES stands for Data Encryption Standard. It is a symmetric key algorithm used for encrypting and decrypting data. DES was developed by IBM in the 1970s and was adopted as a federal standard in the United States. It uses a 56-bit key to encrypt data in blocks of 64 bits.
+    print('READ ALL FILE DATA')
+    try:
+        for data in json_object:
+            correct_answer = data.get('answer')
+            question = data.get('question')
+            search_phrase_question = data.get('search_phrase_question')
+            new_answer = data.get('search_phrase_answer')
+            print(f'Analysing {question}')
+            prompts_content = get_prompts(new_answer=new_answer,correct_answer=correct_answer,question=question)
+            try:
+                resp = chat.predict_messages([HumanMessage(content=prompts_content['human_message_prompt']),
+                                              SystemMessage(content=prompts_content['system_message_prompt']),
+                                              AIMessage(content='You are an AI assisstant that compares two answers of given question and rates how similar two answers are. You always provide output in json format ')
+                                              ])
 
-DES operates through a series of rounds, each consisting of several steps including permutation, substitution, and XOR operations. These steps are repeated multiple times to ensure the security of the encrypted data.
-
-Despite its historical significance, DES is now considered to be relatively weak due to advances in computing power. It is vulnerable to brute-force attacks, where an attacker tries all possible keys until the correct one is found. As a result, DES is no longer recommended for use in modern cryptographic systems.
-
-In the late 1990s, the Advanced Encryption Standard (AES) was introduced as a replacement for DES. AES is a more secure and efficient encryption algorithm that has become the de facto standard for encryption in many applications and industries."""
-
-    prompts_content = get_prompts(new_answer=new_answer,correct_answer=correct_answer,question=question)
-    print(prompts_content)
-    resp = chat.predict_messages([HumanMessage(content=prompts_content['human_message_prompt']),
-                                  SystemMessage(content=prompts_content['system_message_prompt']),
-                                  AIMessage(content='You are an AI assisstant that compares two answers of given question and rates how similar two answers are. You always provide output in json format ')
-                                  ])
-    file_single_obj ={
-        'question':question,
-        'correct_answer':correct_answer,
-        'new_answer': new_answer
-    }
-    # file_single_obj['answer_comparison'] = resp.content
-    #
-    #
-    # file_data.append(file_single_obj)
-    print('RESPONSE : ',resp.content)
+                message = json.loads(resp.content)
+                print('Message ', message)
+                file_single_obj = {'question': question, 'original': correct_answer,
+                                   'search_phrase': search_phrase_question, 'search_phrase_answer': new_answer,
+                                   'answer_similarity_score': message['answer_similarity'], 'answer_similarity_reason': message['reason'],
+                                   'original_sources':data.get('sources'),'search_phrase_sources':data.get('search_phrase_sources')}
+                file_data.append(file_single_obj)
+            except Exception as e:
+                file_single_obj = {
+                    'question': question,
+                    'question_answer': correct_answer,
+                    'search_phrase': search_phrase_question,
+                    'search_phrase_answer': new_answer
+                }
+                file_data.append(file_single_obj)
+                print(f'Exception Occured. Exception: {e} for {file_single_obj}')
+        filepath ='./random.json'
+        with open(filepath, 'w') as file:
+            for item in file_data:
+                file_data.append(item)
+            file.write(json.dumps(file_data))
+        write_to_file('answer_similarity_comparison.json', file_data)
+    except Exception as e:
+        print(f'Exception occured: {e}')
+        write_to_file('2_answer_similarity_comparison.json', file_data)
 
 
 rate_similarity()
+
