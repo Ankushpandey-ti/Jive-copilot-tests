@@ -14,7 +14,7 @@ import multiprocessing
 
 PROMPT_LAYER_API_KEY= os.environ['PROMPT_LAYER_API_KEY']
 OPEN_API_KEY=os.environ['OPENAI_API_KEY']
-FILE_PATH= 'after_Jive_Add_On.json'
+FILE_PATH= 'question_search_phrase_sources.json'
 
 def get_prompts(question:str,correct_answer:str,new_answer:str):
     human_message_prompt = f'''Rate how similar these two answers are. Correct_answer:{correct_answer}, New_answer:{new_answer} .'''
@@ -45,8 +45,6 @@ def get_data_from_file(file_path) -> Dict:
 
 def write_to_file(filepath, file_data):
     with open(filepath, 'w') as file:
-        for item in file_data:
-            file_data.append(item)
         file.write(json.dumps(file_data))
 
     print(f"Data written to {filepath}")
@@ -89,12 +87,13 @@ def rate_similarity():
                 }
                 file_data.append(file_single_obj)
                 print(f'Exception Occured. Exception: {e} for {file_single_obj}')
-        filepath ='./random.json'
+        print('LOOP ENDED')
+        filepath ='final_data_file.json'
+
         with open(filepath, 'w') as file:
-            for item in file_data:
-                file_data.append(item)
             file.write(json.dumps(file_data))
-        write_to_file('answer_similarity_comparison.json', file_data)
+
+        write_to_file('final_data_file_for_comparision.json', file_data)
     except Exception as e:
         print(f'Exception occured: {e}')
         write_to_file('2_answer_similarity_comparison.json', file_data)

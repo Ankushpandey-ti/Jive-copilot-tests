@@ -24,7 +24,7 @@ def json_to_csv(json_file_path, csv_file_path):
 
 # Example usage
 ## FILENAME SHOULD BE WITHOUT EXTENSION (FILE TYPE)
-FILENAME = './question_search_phrase_sources'
+FILENAME = './final_data_file'
 json_file_path = f'{FILENAME}.json'
 csv_file_path = f'{FILENAME}.csv'
 
